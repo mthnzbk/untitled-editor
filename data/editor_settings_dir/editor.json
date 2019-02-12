@@ -1,0 +1,10 @@
+{
+  "open_recent_files": [
+    ["filename", "filepath"]
+  ],
+  "open_recent_projects": [
+    ["project_name", "project_path"]
+  ],
+  "open_project": "path or none",
+  "open_tabs": ["pats or none"]
+}
