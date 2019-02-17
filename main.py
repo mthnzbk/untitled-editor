@@ -1,20 +1,21 @@
-from PyQt5.QtWidgets import (QApplication, qApp, QWidget, QMenu, QMenuBar, QAction, QActionGroup, QTabWidget,
+from PyQt5.QtWidgets import (QApplication, qApp, QWidget, QMenu, QMenuBar, QAction, QTabWidget,
                              QSplitter, QGridLayout, QHBoxLayout, QVBoxLayout, QTreeWidget, QTreeWidgetItem,
-                             QTreeWidgetItemIterator, QInputDialog, QDockWidget, QPushButton, QFileDialog)
-from PyQt5.QtGui import QIcon, QFont, QColor, QImage, QDesktopServices
+                             QInputDialog, QPushButton, QFileDialog)
+from PyQt5.QtGui import QIcon, QFont, QColor, QGuiApplication, QDesktopServices
 from PyQt5.QtCore import Qt, QIODevice, QCoreApplication, QUrl, QProcess
 from PyQt5.Qsci import *
 from editor.editor import Editor
 from editor.projecttree import ProjectTree
-from editor.settings import settings
+from editor.settings import settings, Settings
 from editor.mainwindow import EditorWindow
+import rs
 import sys
 
 
 class Window(EditorWindow):
     def __init__(self):
         super().__init__()
-
+        self.setWindowIcon(QIcon("logo.png"))
 
         if not self.tabwidget.count():
             self.saveFileAction.setDisabled(True)
@@ -34,9 +35,9 @@ class Window(EditorWindow):
             self.runAction.setDisabled(True)
             self.runWithAction.setDisabled(True)
 
-        self.tabwidget.currentChanged.connect(self.tabChangeCommit)
 
-        self.newFileAction.triggered.connect(self.newFile)
+
+        # self.newFileAction.triggered.connect(self.newFile) #TODO menu oldu
         self.openFileAction.triggered.connect(self.openFile)
         self.openProjectAction.triggered.connect(self.openProject)
         self.saveFileAction.triggered.connect(self.saveFile)
@@ -60,7 +61,23 @@ class Window(EditorWindow):
 
 
         self.documentationAction.triggered.connect(self.documentation)
+        self.tabwidget.currentChanged.connect(self.tabChangeCommit)
+        self.init()
 
+
+
+
+    def init(self):
+        s = Settings()
+
+        if s["open_project"]:
+            self.projectTree.setProject(s["open_project"])
+
+        if s["open_tabs"]:
+            for tab in s["open_tabs"]:
+                self.tabwidget.addFileTab(tab)
+
+            self.tabwidget.setCurrentIndex(s["open_tab"])
 
 
     def tabChangeCommit(self, index):
@@ -71,8 +88,6 @@ class Window(EditorWindow):
             self.saveAsAction.setEnabled(True)
             self.saveAllAction.setEnabled(True)
             self.closeFileAction.setEnabled(True)
-            self.undoAction.setEnabled(True)
-            self.redoAction.setEnabled(True)
             self.copyAction.setEnabled(True)
             self.cutAction.setEnabled(True)
             self.pasteAction.setEnabled(True)
@@ -102,9 +117,26 @@ class Window(EditorWindow):
         if ok:
             self.tabwidget.addFileTab(f)
 
+            if Settings()["open_recent_files"]:
+                s = Settings()
+                s["open_recent_files"].insert(0, f)
+                s.write()
+
+            else:
+                Settings()["open_recent_files"] = [ f]
+
     def openProject(self):
-        f = QFileDialog.getExistingDirectory()
-        # TODO dizin açma işlevi yapılacak
+        folder = QFileDialog.getExistingDirectory(self)
+        if folder:
+            self.projectTree.setProject(folder)
+
+            if Settings()["open_recent_projects"]:
+                s = Settings()
+                s["open_recent_projects"].insert(0, folder)
+                s.write()
+
+            else:
+                Settings()["open_recent_projects"] = [folder]
 
     def saveFile(self):
         self.tabwidget.currentWidget().fileSave.emit()
@@ -117,7 +149,7 @@ class Window(EditorWindow):
             self.tabwidget.setTabText(self.tabwidget.currentIndex(), f.split("/")[-1])
 
     def closeFile(self):
-        self.tabwidget.removeTab(self.tabwidget.currentIndex())
+        self.tabwidget.tabBar().tabCloseRequested.emit(self.tabwidget.currentIndex())
 
     def closeAllFiles(self):
         for tab in list(range(self.tabwidget.count())):
@@ -158,6 +190,28 @@ class Window(EditorWindow):
 
     def documentation(self):
         QDesktopServices.openUrl(QUrl("https://untitlededitor.com/documentation"))
+
+
+    def closeEvent(self, event):
+        super().closeEvent(event)
+        s = Settings()
+        if self.tabwidget.count():
+            tab_list = []
+
+            for index in list(range(self.tabwidget.count())):
+                tab = self.tabwidget.widget(index)
+                tab_list.append(tab.file_path)
+
+            s["open_tabs"] = tab_list
+            s["open_tab"] = self.tabwidget.currentIndex()
+
+        else:
+            s["open_tabs"] = []
+            s["open_tab"] = None
+
+        if self.projectTree.project():
+            s["open_project"] = self.projectTree.project()
+
 
 
 if __name__ == "__main__":

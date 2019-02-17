@@ -1,0 +1,13 @@
+<RCC>
+    <qresource prefix="/">
+        <file>img/folder.svg</file>
+        <file>img/folder-python.svg</file>
+        <file>img/text-css.svg</file>
+        <file>img/text-html.svg</file>
+        <file>img/text-xml.svg</file>
+        <file>img/text-javascript.svg</file>
+        <file>img/text-plain.svg</file>
+        <file>img/text-python.svg</file>
+        <file>img/text-sql.svg</file>
+    </qresource>
+</RCC>

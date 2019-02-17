@@ -20,7 +20,7 @@ class TabWidget(QTabWidget):
 
 
     def removeFileTab(self, index):
-        self.open_files.remove(self.currentWidget().file_path)
+        self.open_files.remove(self.widget(index).file_path)
         self.removeTab(index)
 
     def addFileTab(self, file_path=None, file_mode=QIODevice.ReadOnly):

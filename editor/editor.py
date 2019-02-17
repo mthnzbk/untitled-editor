@@ -64,6 +64,7 @@ class Editor(QsciScintilla):
             text = QTextStream(self.file)
             text.setCodec("UTF-8")
             self.setText(text.readAll())
+            self.file.close()
 
         self.autosave_timer = QTimer(self)
         self.autosave_timer.timeout.connect(self.autoSaveCommit)
@@ -142,7 +143,7 @@ class Editor(QsciScintilla):
 
 
     def contextMenuEvent(self, event):
-        menu = QMenu()
+        # menu = QMenu()
 
         return self.parent.parent.editMenu.exec(event.globalPos())
 

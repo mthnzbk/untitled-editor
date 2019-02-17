@@ -6,5 +6,6 @@
     ["project_name", "project_path"]
   ],
   "open_project": "path or none",
-  "open_tabs": ["pats or none"]
+  "open_tabs": ["pats or none"],
+  "color_scheme": "monakai"
 }
