@@ -23,15 +23,15 @@ class TabWidget(QTabWidget):
         self.open_files.remove(self.widget(index).file_path)
         self.removeTab(index)
 
-    def addFileTab(self, file_path=None, file_mode=QIODevice.ReadOnly):
+    def addFileTab(self, file_path=None):
         if file_path in self.open_files:
             return
 
         if file_path:
-            index = self.addTab(Editor(self, file_path, file_mode), file_path.split("/")[-1])
+            index = self.addTab(Editor(self, file_path), file_path.split("/")[-1])
 
         else:
-            index = self.addTab(Editor(self, file_path, file_mode), self.tr("untitled"))
+            index = self.addTab(Editor(self, file_path,), self.tr("untitled"))
 
         self.open_files.append(file_path)
         self.setCurrentIndex(index)

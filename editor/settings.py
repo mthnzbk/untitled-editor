@@ -1,11 +1,11 @@
-from PyQt5.QtCore import QSettings, QDir, QFile, QObject, QIODevice, QTextStream, QDataStream
+from PyQt5.QtCore import QSettings, QDir, QFile, QObject, QIODevice, QTextStream
 import sys
 import os
 import posixpath
 import json
 
 def settings():
-    s = QSettings(posixpath.join(QDir.homePath(), ".editor", "hebele.ini"), QSettings.IniFormat)
+    s = QSettings(posixpath.join(QDir.homePath(), ".editor.py", "editor.ini"), QSettings.IniFormat)
     s.setIniCodec("UTF-8")
     return s
 
@@ -25,7 +25,7 @@ class Settings(QObject):
         self.json_object[key] = value
         self.write()
 
-    def __init__(self, path=posixpath.join(QDir.homePath(), ".editor", "hebele.json")):
+    def __init__(self, path=posixpath.join(QDir.homePath(), ".editor.py", "editor.json")):
         super().__init__()
 
 

@@ -1,15 +1,15 @@
-from PyQt5.QtWidgets import (QTreeWidget, QInputDialog, QAbstractItemView, QFileSystemModel, QTreeView,
-                             QMenu, QAction, QMessageBox)
-from PyQt5.QtGui import QIcon, QCursor
-from PyQt5.QtCore import Qt, QDir, QFile
-import os
+from PyQt5.QtWidgets import (QInputDialog, QAbstractItemView, QFileSystemModel, QTreeView,
+                             QMenu, QAction, QMessageBox, qApp)
+from PyQt5.QtGui import QCursor, QKeyEvent
+from PyQt5.QtCore import Qt, QFile
 import posixpath
+from .settings import Settings
 
 
 
 class ProjectTree(QTreeView):
 
-    hide_file_and_folder = [".git", ".workspace"]
+    hide_file_and_folder = [".git", "__pycache__", ".project.json"]
     project_path = None
 
     def __init__(self, parent=None):
@@ -47,6 +47,9 @@ class ProjectTree(QTreeView):
         self.openTerminalAction.triggered.connect(self.openTerminal)
         self.doubleClicked.connect(self.openFile)
         self.model().fileRenamed.connect(self.renameControl)
+        self.expanded.connect(self.expandControl)
+        self.collapsed.connect(self.collapseControl)
+        self.clicked.connect(self.renameState)
 
 
     def openFile(self, model):
@@ -73,9 +76,11 @@ class ProjectTree(QTreeView):
                                    text=file_name)
 
         if ok:
-            file = QFile(self.model().filePath(self.currentIndex()))
-            rename_ok = file.rename(new_file_name)
-            if rename_ok:
+            file = QFile.rename(self.model().filePath(self.currentIndex()),
+                                posixpath.join(posixpath.dirname(self.model().filePath(self.currentIndex())), new_file_name))
+
+
+            if file:
                 self.model().fileRenamed.emit(posixpath.dirname(self.model().filePath(self.currentIndex())),
                                               self.model().fileName(self.currentIndex()), new_file_name)
 
@@ -84,9 +89,17 @@ class ProjectTree(QTreeView):
 
 
     def remove(self):
-        msg = QMessageBox.question(self, self.tr("Delete"), self.tr("Delete file \"{}\"").format(self.currentIndex().data()))
+        selected = self.selectedIndexes()
+        if len(selected) > 1:
+            msg = QMessageBox.question(self, self.tr("Delete"),
+                                       self.tr("Delete {} files").format(len(selected)))
+
+        else:
+            msg = QMessageBox.question(self, self.tr("Delete"), self.tr("Delete file \"{}\"").format(self.currentIndex().data()))
+
         if msg == QMessageBox.Yes:
-            self.model().remove(self.currentIndex())
+            for index in selected:
+                self.model().remove(index)
 
 
     def renameControl(self, path, oldName, newName):
@@ -98,6 +111,17 @@ class ProjectTree(QTreeView):
             self.parent.tabwidget.widget(index).file_path = new_file
             self.parent.tabwidget.setTabText(index, newName)
 
+    def renameState(self):
+        if len(self.selectedIndexes()) > 1:
+            self.renameAction.setDisabled(True)
+
+        else:
+            self.renameAction.setDisabled(False)
+
+
+    def keyPressEvent(self, event):
+        self.renameState()
+        super().keyPressEvent(event)
 
     def openTerminal(self):
         if not self.model().isDir(self.currentIndex()):
@@ -106,19 +130,44 @@ class ProjectTree(QTreeView):
         else:
             dir = self.model().filePath(self.currentIndex())
 
-        print(dir)
 
 
+    # Çift tıklama ile rename özelliği pasif edildi.
     def edit(self, index, trigger, event):
         if trigger == QAbstractItemView.DoubleClicked:
             return False
 
+        if isinstance(event, QKeyEvent):
+
+            if event.key() == Qt.Key_F2:
+                return False
+
         return QTreeView.edit(self, index, trigger, event)
+
+    def expandControl(self, index):
+        expand = self.model().filePath(index)
+        s = Settings()
+        project_settings = Settings(posixpath.join(s["open_project"], ".project.json"))
+        if project_settings["open_project_folder"]:
+            project_settings["open_project_folder"].append(expand)
+            project_settings["open_project_folder"] = list(set(project_settings["open_project_folder"]))
+            project_settings.write()
+
+        else:
+            project_settings["open_project_folder"] = [expand]
+
+
+    def collapseControl(self, index):
+        collapse = self.model().filePath(index)
+        s = Settings()
+        project_settings = Settings(posixpath.join(s["open_project"], ".project.json"))
+        if project_settings["open_project_folder"]:
+            project_settings["open_project_folder"].remove(collapse)
+            project_settings.write()
+
 
     def setProject(self, folder):
         self.project_path = folder
-        # model.setNameFilters(["__pycache__/", ".git/"])
-        # model.setNameFilterDisables(False)
         self.model().setRootPath(self.project_path)
         self.setRootIndex(self.model().index(self.project_path))
 
@@ -126,13 +175,23 @@ class ProjectTree(QTreeView):
         self.setColumnHidden(2, True)
         self.setColumnHidden(3, True)
 
-        # folder_item = QTreeWidgetItem()
-        # folder_item.setText(0, folder.split("/")[-1])
-        # folder_item.setIcon(0, QIcon(":/img/folder.svg"))
-        # file_item = QTreeWidgetItem()
-        # file_item.setText(0, "file.py")
-        # file_item.setIcon(0, QIcon(":/img/text-python.svg"))
-        # folder_item.addChild(file_item)
-        # self.addTopLevelItem(folder_item)
+        for tab in list(range(self.parent.tabwidget.count())):
+            qApp.processEvents()
+            self.parent.tabwidget.removeTab(0)
+
+        s = Settings()
+        s["open_project"] = folder
+        project_settings = Settings(posixpath.join(s["open_project"], ".project.json"))
+
+        if project_settings["open_project_folder"]:
+            for path in project_settings["open_project_folder"]:
+                index = self.model().index(path)
+                self.expand(index)
+
+        if project_settings["open_tabs"]:
+            for tab in project_settings["open_tabs"]:
+                self.parent.tabwidget.addFileTab(tab)
+
+            self.parent.tabwidget.setCurrentIndex(project_settings["open_tab"])
 
     def project(self): return self.project_path

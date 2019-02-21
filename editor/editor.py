@@ -10,11 +10,10 @@ class Editor(QsciScintilla):
     saveState = None
     fileSave = pyqtSignal()
 
-    def __init__(self, parent=None, file_path=None, mode=QIODevice.ReadOnly):
+    def __init__(self, parent=None, file_path=None):
         super().__init__()
         self.parent = parent
         self.file_path = file_path
-        self.file_mode = mode
         self.font = QFont("Monaco")
         self.font.setPointSize(10)
         self.setFont(self.font)
@@ -60,7 +59,7 @@ class Editor(QsciScintilla):
         self.lexerSelect()
 
         self.file = QFile(self.file_path)
-        if self.file.open(self.file_mode | QIODevice.Text):
+        if self.file.open(QIODevice.ReadWrite | QIODevice.Text):
             text = QTextStream(self.file)
             text.setCodec("UTF-8")
             self.setText(text.readAll())
@@ -102,7 +101,7 @@ class Editor(QsciScintilla):
             file_name = self.file_path.split("/")[-1]
             self.setWindowTitle(file_name)
 
-            if file_type == "py":
+            if file_type == "py" or "pyw":
                 lex = QsciLexerPython()
                 lex.setFont(self.font)
                 self.setLexer(lex)
@@ -134,6 +133,11 @@ class Editor(QsciScintilla):
 
             elif file_type == "html":
                 lex = QsciLexerHTML()
+                lex.setFont(self.font)
+                self.setLexer(lex)
+
+            elif file_type == "xml" or "qrc" or "svg":
+                lex = QsciLexerXML()
                 lex.setFont(self.font)
                 self.setLexer(lex)
 
